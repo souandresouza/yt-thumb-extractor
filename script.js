@@ -17,23 +17,34 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Enter') extractThumbnail();
     });
 
+    // Extrai o ID do vídeo (suporta watch, live, shorts, links curtos)
     function extractVideoId(url) {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
+        const patterns = [
+            /youtu\.be\/([^#&?]{11})/, // youtu.be/ID
+            /youtube\.com\/watch\?v=([^#&?]{11})/, // youtube.com/watch?v=ID
+            /youtube\.com\/live\/([^#&?]{11})/, // youtube.com/live/ID
+            /youtube\.com\/shorts\/([^#&?]{11})/ // youtube.com/shorts/ID
+        ];
+
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match && match[1]) return match[1];
+        }
+        return null;
     }
 
+    // Extrai a thumbnail
     async function extractThumbnail() {
         const videoUrl = videoUrlInput.value.trim();
         
         if (!videoUrl) {
-            alert('Por favor, insira uma URL do YouTube');
+            alert('⚠️ Por favor, insira uma URL do YouTube');
             return;
         }
         
         const videoId = extractVideoId(videoUrl);
         if (!videoId) {
-            alert('URL do YouTube inválida');
+            alert('❌ URL inválida. Formatos aceitos:\n\n• youtube.com/watch?v=ID\n• youtube.com/live/ID\n• youtube.com/shorts/ID\n• youtu.be/ID');
             return;
         }
 
@@ -42,32 +53,33 @@ document.addEventListener('DOMContentLoaded', function() {
         resultDiv.style.display = 'none';
         downloadBtn.disabled = true;
 
-        // Carrega a qualidade selecionada quando o usuário escolher
+        // Carrega a qualidade padrão (maxresdefault)
         const selectedQuality = document.querySelector('input[name="quality"]:checked').value;
         await loadThumbnail(videoId, selectedQuality);
     }
 
-    // Monitora mudanças na seleção de qualidade
+    // Atualiza a thumbnail quando a qualidade é alterada
     qualityInputs.forEach(input => {
         input.addEventListener('change', async function() {
             const videoId = extractVideoId(videoUrlInput.value.trim());
-            if (videoId) {
-                await loadThumbnail(videoId, this.value);
-            }
+            if (videoId) await loadThumbnail(videoId, this.value);
         });
     });
 
+    // Carrega a thumbnail do YouTube
     async function loadThumbnail(videoId, quality) {
         const url = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
         
         try {
             thumbnailImg.src = url;
             
+            // Espera o carregamento da imagem
             await new Promise((resolve, reject) => {
                 thumbnailImg.onload = resolve;
-                thumbnailImg.onerror = reject;
+                thumbnailImg.onerror = () => reject(new Error('Thumbnail não encontrada'));
             });
             
+            // Atualiza a interface
             resolutionSpan.textContent = `${thumbnailImg.naturalWidth}x${thumbnailImg.naturalHeight}`;
             downloadBtn.disabled = false;
             downloadBtn.dataset.videoId = videoId;
@@ -75,12 +87,13 @@ document.addEventListener('DOMContentLoaded', function() {
             resultDiv.style.display = 'block';
             
         } catch (error) {
-            console.error('Erro ao carregar thumbnail:', error);
-            alert(`Não foi possível carregar a thumbnail em ${quality}. Tente outra qualidade.`);
+            console.error('Erro ao carregar:', error);
+            alert(`❌ Thumbnail em "${quality}" não encontrada. Tente outra qualidade.`);
             resultDiv.style.display = 'none';
         }
     }
 
+    // Faz o download da thumbnail como PNG
     async function downloadThumbnail() {
         const videoId = downloadBtn.dataset.videoId;
         const quality = downloadBtn.dataset.quality;
@@ -88,30 +101,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!videoId || !quality) return;
 
         try {
-            // Usando fetch para contornar problemas de CORS
+            // Usa fetch para evitar problemas de CORS
             const response = await fetch(thumbnailImg.src);
+            if (!response.ok) throw new Error('Falha ao baixar a imagem');
+            
             const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
             
-            // Criar link de download
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${videoId}-${quality}.png`;
-            document.body.appendChild(a);
-            a.click();
+            // Cria o link de download
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `${videoId}-${quality}.png`;
+            document.body.appendChild(link);
+            link.click();
             
-            // Limpar
+            // Limpeza
             setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
             }, 100);
             
         } catch (error) {
-            console.error('Erro ao baixar:', error);
+            console.error('Erro no download:', error);
             
-            // Fallback para usuário: abrir em nova aba
+            // Fallback: abre em nova aba
             window.open(thumbnailImg.src, '_blank');
-            alert('Não foi possível baixar diretamente. A imagem foi aberta em uma nova aba. Você pode salvá-la manualmente.');
+            alert('⚠️ Não foi possível baixar automaticamente. A imagem foi aberta em uma nova aba para salvar manualmente.');
         }
     }
 });
