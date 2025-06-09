@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extrator de Thumbnails do YouTube</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Extrator de Thumbnails do YouTube</h1>
+        <div class="input-group">
+            <input type="text" id="videoUrl" placeholder="Cole a URL do vídeo do YouTube aqui..." autofocus>
+            <button id="extractBtn">Extrair Thumbnail</button>
+        </div>
+        
+        <div class="quality-selector" id="qualitySelector" style="display: none;">
+            <h3>Selecione a qualidade:</h3>
+            <div class="quality-options">
+                <label>
+                    <input type="radio" name="quality" value="maxresdefault" checked> Máxima Resolução
+                </label>
+                <label>
+                    <input type="radio" name="quality" value="sddefault"> Padrão
+                </label>
+                <label>
+                    <input type="radio" name="quality" value="hqdefault"> Alta Qualidade
+                </label>
+                <label>
+                    <input type="radio" name="quality" value="mqdefault"> Média Qualidade
+                </label>
+                <label>
+                    <input type="radio" name="quality" value="default"> Padrão (menor)
+                </label>
+            </div>
+        </div>
+        
+        <div class="result" id="result">
+            <div class="thumbnail-container">
+                <img id="thumbnail" src="" alt="Thumbnail do YouTube">
+            </div>
+            <div class="info">
+                <p>Resolução: <span id="resolution">-</span></p>
+                <button id="downloadBtn" disabled>Download PNG</button>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h2>Como usar:</h2>
+            <ol>
+                <li>Cole a URL do vídeo do YouTube</li>
+                <li>Clique em "Extrair Thumbnail"</li>
+                <li>Selecione a qualidade desejada</li>
+                <li>Clique em "Download PNG" para salvar</li>
+            </ol>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
