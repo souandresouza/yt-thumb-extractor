@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultDiv = document.getElementById('result');
     const qualitySelector = document.getElementById('qualitySelector');
     const qualityInputs = document.querySelectorAll('input[name="quality"]');
+    const timeInput = document.getElementById('timeInput');
+    const timeValue = document.getElementById('timeValue');
 
     // Configuração para evitar CORS
     thumbnailImg.crossOrigin = 'Anonymous';
@@ -15,6 +17,16 @@ document.addEventListener('DOMContentLoaded', function() {
     downloadBtn.addEventListener('click', downloadThumbnail);
     videoUrlInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') extractThumbnail();
+    });
+
+    // Atualiza o valor exibido do tempo
+    timeInput.addEventListener('input', function() {
+        timeValue.textContent = formatTime(this.value);
+        // Atualiza a thumbnail se já tiver uma carregada
+        const videoId = extractVideoId(videoUrlInput.value.trim());
+        if (videoId && resultDiv.style.display === 'block') {
+            loadThumbnail(videoId, document.querySelector('input[name="quality"]:checked').value);
+        }
     });
 
     // Extrai o ID do vídeo (suporta watch, live, shorts, links curtos)
@@ -31,6 +43,22 @@ document.addEventListener('DOMContentLoaded', function() {
             if (match && match[1]) return match[1];
         }
         return null;
+    }
+
+    // Formata segundos para MM:SS
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Converte tempo MM:SS para segundos
+    function timeToSeconds(timeString) {
+        const parts = timeString.split(':');
+        if (parts.length === 2) {
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+        return parseInt(timeString);
     }
 
     // Extrai a thumbnail
@@ -53,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resultDiv.style.display = 'none';
         downloadBtn.disabled = true;
 
-        // Carrega a qualidade padrão (maxresdefault)
+        // Carrega a thumbnail
         const selectedQuality = document.querySelector('input[name="quality"]:checked').value;
         await loadThumbnail(videoId, selectedQuality);
     }
@@ -68,7 +96,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Carrega a thumbnail do YouTube
     async function loadThumbnail(videoId, quality) {
-        const url = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+        let url;
+        const timeInSeconds = timeInput.value;
+        
+        // Para thumbnails com tempo específico, usamos a API de sprites
+        if (timeInSeconds > 0 && quality !== 'maxresdefault' && quality !== 'sddefault' && quality !== 'hqdefault') {
+            // Calcula o número do sprite baseado no tempo (YouTube gera 4 thumbnails por sprite)
+            const spriteNumber = Math.floor(timeInSeconds / 10);
+            url = `https://img.youtube.com/vi/${videoId}/${quality}${spriteNumber}.jpg`;
+        } else {
+            // Thumbnails padrão sem tempo específico
+            url = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+        }
         
         try {
             thumbnailImg.src = url;
@@ -84,12 +123,41 @@ document.addEventListener('DOMContentLoaded', function() {
             downloadBtn.disabled = false;
             downloadBtn.dataset.videoId = videoId;
             downloadBtn.dataset.quality = quality;
+            downloadBtn.dataset.time = timeInSeconds;
             resultDiv.style.display = 'block';
             
         } catch (error) {
             console.error('Erro ao carregar:', error);
-            alert(`❌ Thumbnail em "${quality}" não encontrada. Tente outra qualidade.`);
-            resultDiv.style.display = 'none';
+            
+            // Fallback: tenta carregar sem o tempo específico
+            if (timeInSeconds > 0) {
+                console.log('Tentando carregar sem tempo específico...');
+                const fallbackUrl = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+                thumbnailImg.src = fallbackUrl;
+                
+                try {
+                    await new Promise((resolve, reject) => {
+                        thumbnailImg.onload = resolve;
+                        thumbnailImg.onerror = reject;
+                    });
+                    
+                    resolutionSpan.textContent = `${thumbnailImg.naturalWidth}x${thumbnailImg.naturalHeight}`;
+                    downloadBtn.disabled = false;
+                    downloadBtn.dataset.videoId = videoId;
+                    downloadBtn.dataset.quality = quality;
+                    downloadBtn.dataset.time = '0';
+                    resultDiv.style.display = 'block';
+                    
+                    alert('⚠️ Thumbnail no tempo específico não encontrada. Mostrando thumbnail padrão.');
+                    
+                } catch (fallbackError) {
+                    alert(`❌ Thumbnail em "${quality}" não encontrada. Tente outra qualidade.`);
+                    resultDiv.style.display = 'none';
+                }
+            } else {
+                alert(`❌ Thumbnail em "${quality}" não encontrada. Tente outra qualidade.`);
+                resultDiv.style.display = 'none';
+            }
         }
     }
 
@@ -97,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function downloadThumbnail() {
         const videoId = downloadBtn.dataset.videoId;
         const quality = downloadBtn.dataset.quality;
+        const time = downloadBtn.dataset.time;
         
         if (!videoId || !quality) return;
 
@@ -108,10 +177,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const blob = await response.blob();
             const blobUrl = URL.createObjectURL(blob);
             
-            // Cria o link de download
+            // Cria o nome do arquivo com tempo
+            const timeSuffix = time > 0 ? `-${formatTime(time).replace(':', 'm')}s` : '';
             const link = document.createElement('a');
             link.href = blobUrl;
-            link.download = `${videoId}-${quality}.png`;
+            link.download = `${videoId}-${quality}${timeSuffix}.png`;
             document.body.appendChild(link);
             link.click();
             
