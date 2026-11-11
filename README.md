@@ -4,7 +4,8 @@ Ferramentas para obter thumbnails de vídeos do YouTube em alta resolução:
 
 - **`yt_thumb.py`** — CLI em Python que valida as variantes disponíveis, escolhe a
   maior imagem, remove barras pretas e pode remover logo/marca d'água.
-- **`index.html`** — página web estática para consulta rápida no navegador.
+- **`index.html`** — página web estática para consulta rápida no navegador:
+  valida variantes, escolhe frames do vídeo, remove barras pretas e baixa em PNG.
 
 ## CLI (`yt_thumb.py`)
 
@@ -138,18 +139,45 @@ esquerdo), `br` (inferior direito).
 
 ## Versão web
 
-Abra o `index.html` no navegador. Ela monta as URLs de thumbnail diretamente e
-serve para uma consulta rápida, sem instalar nada.
+Abra o `index.html` no navegador (basta dar duplo clique; não precisa de build
+nem de servidor). É uma página estática em HTML/CSS/JS para consulta rápida,
+sem instalar nada.
 
-Limitações conhecidas da versão web:
+### O que ela faz
 
-- não verifica se a variante existe (`maxresdefault.jpg` pode retornar 404);
-- não remove as barras pretas de `sddefault`/`hqdefault`;
-- o seletor de tempo gera URLs inválidas (ex.: `mqdefault5.jpg`) e acaba voltando
-  para a thumbnail padrão;
-- o botão "Download PNG" baixa o JPEG com extensão `.png`.
+- Aceita URL completa, `youtu.be`, Shorts, live, embed, `music.youtube.com` ou o
+  ID puro.
+- **Valida cada variante por HTTP de verdade**: faz `fetch` da imagem, confere o
+  status (404 é descartado) e as dimensões reais. O placeholder cinza de 120x90
+  que o YouTube devolve junto de um 404 é ignorado.
+- Escolhe a **maior variante válida** na ordem
+  `maxresdefault` → `hq720` → `sddefault` → `hqdefault` → `mqdefault` → `default`.
+- Permite limitar a qualidade máxima (Melhor disponível, 640x480, 480x360,
+  320x180 ou 120x90). A partir da qualidade escolhida, ela tenta as menores
+  seguintes se a maior não existir.
+- **Seletor de fonte**: thumbnail do criador ou um dos **frames 1–3** do vídeo
+  (`maxresN`/`sdN`/`hqN`/`mqN`/`N`). Ao escolher um frame, a qualidade é
+  definida automaticamente; se o frame não existir, ela avisa e volta para a
+  thumbnail do criador.
+- **Remove barras pretas** simétricas (letterbox/pillarbox) usando a mesma
+  heurística da CLI, com mínimo de 6 px por lado.
+- **Download em PNG real**, gerado pelo canvas a partir da imagem (inclusive
+  depois do recorte). Se o navegador não conseguir gerar o PNG, baixa o JPEG
+  original como fallback.
+- Mensagens de erro e de progresso aparecem na própria página, sem `alert`.
 
-Para esses casos, use a CLI.
+Tudo é feito no navegador: nenhum vídeo, URL ou imagem é enviado para outro
+servidor além do próprio YouTube.
+
+> Se o navegador bloquear o `fetch` das imagens (configurações de CORS ou
+> extensões), a página cai para o carregamento por `<img>`. Nesse modo não é
+> possível confirmar o status HTTP, então variantes de 120x90 são descartadas por
+> precaução. Para o comportamento completo, sirva a pasta por HTTP:
+>
+> ```bash
+> python3 -m http.server 8000
+> # abra http://localhost:8000/
+> ```
 
 ## Estrutura
 

@@ -4,63 +4,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Extraia thumbnails do YouTube em alta resolução, com validação de variantes, remoção de barras pretas e download em PNG.">
     <title>Extrator de Thumbnails do YouTube</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <h1>Extrator de Thumbnails do YouTube</h1>
+
         <div class="input-group">
             <input type="text" id="videoUrl" placeholder="Cole a URL do vídeo do YouTube aqui..." autofocus>
             <button id="extractBtn">Extrair Thumbnail</button>
         </div>
-        
+
+        <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+
         <div class="quality-selector" id="qualitySelector" style="display: none;">
-            <h3>Selecione a qualidade:</h3>
+            <h3>Qualidade máxima:</h3>
             <div class="quality-options">
                 <label>
-                    <input type="radio" name="quality" value="maxresdefault" checked> Máxima Resolução
+                    <input type="radio" name="quality" value="maxresdefault" checked> Melhor disponível
                 </label>
                 <label>
-                    <input type="radio" name="quality" value="sddefault"> Padrão
+                    <input type="radio" name="quality" value="sddefault"> 640x480 (SD)
                 </label>
                 <label>
-                    <input type="radio" name="quality" value="hqdefault"> Alta Qualidade
+                    <input type="radio" name="quality" value="hqdefault"> 480x360 (HQ)
                 </label>
                 <label>
-                    <input type="radio" name="quality" value="mqdefault"> Média Qualidade
+                    <input type="radio" name="quality" value="mqdefault"> 320x180 (MQ)
                 </label>
                 <label>
-                    <input type="radio" name="quality" value="default"> Padrão (menor)
+                    <input type="radio" name="quality" value="default"> 120x90 (mínima)
                 </label>
             </div>
-            
-            <div class="time-selector">
-                <label for="timeInput">Tempo do vídeo: <span id="timeValue">00:00</span></label>
-                <div class="time-controls">
-                    <input type="range" id="timeInput" min="0" max="600" value="0" step="10">
-                </div>
-                <small>Arraste para escolher o minuto específico (até 10 minutos)</small>
+
+            <div class="frame-selector">
+                <label for="frameSelector">Fonte da imagem:</label>
+                <select id="frameSelector">
+                    <option value="0" selected>Thumbnail do criador (melhor)</option>
+                    <option value="1">Frame 1 do vídeo</option>
+                    <option value="2">Frame 2 do vídeo</option>
+                    <option value="3">Frame 3 do vídeo</option>
+                </select>
+                <small>
+                    Frames são gerados pelo YouTube e podem não existir em todos os vídeos.
+                    Ao escolher um frame, a qualidade é definida automaticamente.
+                </small>
             </div>
         </div>
-        
+
         <div class="result" id="result">
             <div class="thumbnail-container">
                 <img id="thumbnail" src="" alt="Thumbnail do YouTube">
             </div>
             <div class="info">
-                <p>Resolução: <span id="resolution">-</span></p>
+                <div class="meta">
+                    <p>Resolução: <span id="resolution">-</span></p>
+                    <p class="source" id="sourceInfo"></p>
+                </div>
                 <button id="downloadBtn" disabled>Download PNG</button>
             </div>
         </div>
-        
+
         <div class="instructions">
             <h2>Como usar:</h2>
             <ol>
                 <li>Cole a URL do vídeo do YouTube</li>
                 <li>Clique em "Extrair Thumbnail"</li>
-                <li>Selecione a qualidade desejada</li>
-                <li>Escolha o tempo específico do vídeo (opcional)</li>
+                <li>Escolha a fonte: thumbnail do criador ou um frame do vídeo</li>
+                <li>Se quiser, limite a qualidade máxima da thumbnail</li>
                 <li>Clique em "Download PNG" para salvar</li>
             </ol>
         </div>
